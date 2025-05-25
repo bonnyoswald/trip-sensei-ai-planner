@@ -9,6 +9,7 @@ import { NotificationCenter } from '@/components/NotificationCenter';
 import { ItineraryGenerator } from '@/components/ItineraryGenerator';
 import { PaymentProcessor } from '@/components/PaymentProcessor';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ServerTime } from '@/components/ServerTime'; // Import ServerTime component
 
 const Index = () => {
   return (
@@ -29,11 +30,12 @@ const Index = () => {
             </div>
 
             <Tabs defaultValue="ai-chat" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5"> {/* Adjusted grid-cols to 5 */}
                 <TabsTrigger value="ai-chat">AI Assistant</TabsTrigger>
                 <TabsTrigger value="itinerary">Auto Itinerary</TabsTrigger>
                 <TabsTrigger value="notifications">Notifications</TabsTrigger>
                 <TabsTrigger value="payments">Payments</TabsTrigger>
+                <TabsTrigger value="server-time">Server Time</TabsTrigger> {/* New Tab Trigger */}
               </TabsList>
 
               <TabsContent value="ai-chat" className="mt-6">
@@ -62,6 +64,16 @@ const Index = () => {
                       console.log('Payment successful:', paymentId);
                     }}
                   />
+                </div>
+              </TabsContent>
+              
+              {/* New Tab Content for Server Time */}
+              <TabsContent value="server-time" className="mt-6">
+                <div className="flex justify-center">
+                  <ServerTime />
+                </div>
+                <div className="text-center mt-8 text-muted-foreground">
+                  <p>Displays the current time from the server.</p>
                 </div>
               </TabsContent>
             </Tabs>

@@ -9,7 +9,233 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      bookings: {
+        Row: {
+          booking_data: Json
+          created_at: string
+          external_booking_id: string | null
+          id: string
+          status: string | null
+          total_price: number | null
+          trip_id: string | null
+          type: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          booking_data: Json
+          created_at?: string
+          external_booking_id?: string | null
+          id?: string
+          status?: string | null
+          total_price?: number | null
+          trip_id?: string | null
+          type: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          booking_data?: Json
+          created_at?: string
+          external_booking_id?: string | null
+          id?: string
+          status?: string | null
+          total_price?: number | null
+          trip_id?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          data: Json | null
+          id: string
+          message: string
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          message: string
+          read?: boolean | null
+          title: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          message?: string
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      price_alerts: {
+        Row: {
+          created_at: string
+          criteria: Json
+          destination: string
+          id: string
+          is_active: boolean | null
+          target_price: number | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          criteria: Json
+          destination: string
+          id?: string
+          is_active?: boolean | null
+          target_price?: number | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          criteria?: Json
+          destination?: string
+          id?: string
+          is_active?: boolean | null
+          target_price?: number | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          preferences: Json | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          preferences?: Json | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          preferences?: Json | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      scheduled_tasks: {
+        Row: {
+          attempts: number | null
+          created_at: string
+          id: string
+          max_attempts: number | null
+          payload: Json
+          scheduled_for: string
+          status: string | null
+          task_type: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number | null
+          created_at?: string
+          id?: string
+          max_attempts?: number | null
+          payload: Json
+          scheduled_for: string
+          status?: string | null
+          task_type: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number | null
+          created_at?: string
+          id?: string
+          max_attempts?: number | null
+          payload?: Json
+          scheduled_for?: string
+          status?: string | null
+          task_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      trips: {
+        Row: {
+          budget: number | null
+          created_at: string
+          description: string | null
+          destination: string | null
+          end_date: string | null
+          id: string
+          itinerary: Json | null
+          start_date: string | null
+          status: string | null
+          title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          budget?: number | null
+          created_at?: string
+          description?: string | null
+          destination?: string | null
+          end_date?: string | null
+          id?: string
+          itinerary?: Json | null
+          start_date?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          budget?: number | null
+          created_at?: string
+          description?: string | null
+          destination?: string | null
+          end_date?: string | null
+          id?: string
+          itinerary?: Json | null
+          start_date?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

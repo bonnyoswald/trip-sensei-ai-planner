@@ -1,15 +1,10 @@
 
 import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
@@ -17,6 +12,8 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { LocationSearch } from './LocationSearch';
+import { GoogleMap } from './GoogleMap';
 
 interface CreateTripDialogProps {
   open: boolean;
@@ -31,16 +28,22 @@ export const CreateTripDialog: React.FC<CreateTripDialogProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     title: '',
-    destination: '',
     description: '',
+    destination: '',
     budget: '',
-    start_date: null,
-    end_date: null,
+    startDate: undefined as Date | undefined,
+    endDate: undefined as Date | undefined,
   });
+  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = async (e) => {
+  const handleLocationSelect = (location: { lat: number; lng: number; address: string }) => {
+    setSelectedLocation(location);
+    setFormData(prev => ({ ...prev, destination: location.address }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
@@ -49,11 +52,11 @@ export const CreateTripDialog: React.FC<CreateTripDialogProps> = ({
         .from('trips')
         .insert({
           title: formData.title,
-          destination: formData.destination || null,
           description: formData.description || null,
+          destination: formData.destination || null,
           budget: formData.budget ? parseFloat(formData.budget) : null,
-          start_date: formData.start_date,
-          end_date: formData.end_date,
+          start_date: formData.startDate?.toISOString().split('T')[0] || null,
+          end_date: formData.endDate?.toISOString().split('T')[0] || null,
           status: 'planning',
         });
 
@@ -64,15 +67,17 @@ export const CreateTripDialog: React.FC<CreateTripDialogProps> = ({
         description: 'Trip created successfully!',
       });
 
+      // Reset form
       setFormData({
         title: '',
-        destination: '',
         description: '',
+        destination: '',
         budget: '',
-        start_date: null,
-        end_date: null,
+        startDate: undefined,
+        endDate: undefined,
       });
-
+      setSelectedLocation(null);
+      
       onTripCreated();
     } catch (error) {
       toast({
@@ -87,34 +92,46 @@ export const CreateTripDialog: React.FC<CreateTripDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Trip</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="title">Trip Title *</Label>
             <Input
               id="title"
               value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="e.g., Summer Vacation to Italy"
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="e.g., Summer Vacation to Europe"
               required
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="destination">Destination</Label>
-            <Input
-              id="destination"
+            <LocationSearch
               value={formData.destination}
-              onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
-              placeholder="e.g., Rome, Italy"
+              onChange={(value) => setFormData(prev => ({ ...prev, destination: value }))}
+              onLocationSelect={handleLocationSelect}
+              placeholder="Search for a destination..."
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {selectedLocation && (
+            <div className="space-y-2">
+              <Label>Location Preview</Label>
+              <GoogleMap
+                destinations={[selectedLocation.address]}
+                center={selectedLocation}
+                zoom={10}
+                height="200px"
+              />
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Start Date</Label>
               <Popover>
@@ -123,20 +140,19 @@ export const CreateTripDialog: React.FC<CreateTripDialogProps> = ({
                     variant="outline"
                     className={cn(
                       "w-full justify-start text-left font-normal",
-                      !formData.start_date && "text-muted-foreground"
+                      !formData.startDate && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.start_date ? format(formData.start_date, "PPP") : "Pick a date"}
+                    {formData.startDate ? format(formData.startDate, "PPP") : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0">
                   <Calendar
                     mode="single"
-                    selected={formData.start_date}
-                    onSelect={(date) => setFormData({ ...formData, start_date: date })}
+                    selected={formData.startDate}
+                    onSelect={(date) => setFormData(prev => ({ ...prev, startDate: date }))}
                     initialFocus
-                    className={cn("p-3 pointer-events-auto")}
                   />
                 </PopoverContent>
               </Popover>
@@ -150,20 +166,19 @@ export const CreateTripDialog: React.FC<CreateTripDialogProps> = ({
                     variant="outline"
                     className={cn(
                       "w-full justify-start text-left font-normal",
-                      !formData.end_date && "text-muted-foreground"
+                      !formData.endDate && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.end_date ? format(formData.end_date, "PPP") : "Pick a date"}
+                    {formData.endDate ? format(formData.endDate, "PPP") : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0">
                   <Calendar
                     mode="single"
-                    selected={formData.end_date}
-                    onSelect={(date) => setFormData({ ...formData, end_date: date })}
+                    selected={formData.endDate}
+                    onSelect={(date) => setFormData(prev => ({ ...prev, endDate: date }))}
                     initialFocus
-                    className={cn("p-3 pointer-events-auto")}
                   />
                 </PopoverContent>
               </Popover>
@@ -171,34 +186,37 @@ export const CreateTripDialog: React.FC<CreateTripDialogProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="budget">Budget ($)</Label>
+            <Label htmlFor="budget">Budget (USD)</Label>
             <Input
               id="budget"
               type="number"
               value={formData.budget}
-              onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
+              onChange={(e) => setFormData(prev => ({ ...prev, budget: e.target.value }))}
               placeholder="e.g., 2500"
+              min="0"
+              step="0.01"
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
-            <Input
+            <Textarea
               id="description"
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Brief description of your trip..."
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Tell us about your trip plans..."
+              rows={3}
             />
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex gap-3 pt-4">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !formData.title}>
+            <Button type="submit" disabled={loading || !formData.title} className="flex-1">
               {loading ? 'Creating...' : 'Create Trip'}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

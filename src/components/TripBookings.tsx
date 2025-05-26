@@ -4,10 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plane, Hotel, Car, MapPin, Plus, Calendar, DollarSign } from 'lucide-react';
+import { Calendar, MapPin, DollarSign, Plus, Edit, Trash2, Hotel, Plane, Car, UtensilsCrossed } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { CreateBookingDialog } from './CreateBookingDialog';
+import { GoogleMap } from './GoogleMap';
+import { format } from 'date-fns';
 
 interface TripBookingsProps {
   trip: any;
@@ -17,7 +19,6 @@ export const TripBookings: React.FC<TripBookingsProps> = ({ trip }) => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [selectedBookingType, setSelectedBookingType] = useState('flight');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -45,7 +46,7 @@ export const TripBookings: React.FC<TripBookingsProps> = ({ trip }) => {
     }
   };
 
-  const deleteBooking = async (bookingId) => {
+  const deleteBooking = async (bookingId: string) => {
     try {
       const { error } = await supabase
         .from('bookings')
@@ -69,17 +70,17 @@ export const TripBookings: React.FC<TripBookingsProps> = ({ trip }) => {
     }
   };
 
-  const getBookingIcon = (type) => {
+  const getBookingIcon = (type: string) => {
     switch (type) {
-      case 'flight': return <Plane className="h-4 w-4" />;
-      case 'hotel': return <Hotel className="h-4 w-4" />;
-      case 'car': return <Car className="h-4 w-4" />;
-      case 'activity': return <MapPin className="h-4 w-4" />;
-      default: return <Calendar className="h-4 w-4" />;
+      case 'flight': return Plane;
+      case 'hotel': return Hotel;
+      case 'car': return Car;
+      case 'restaurant': return UtensilsCrossed;
+      default: return MapPin;
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed': return 'bg-green-100 text-green-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
@@ -88,60 +89,22 @@ export const TripBookings: React.FC<TripBookingsProps> = ({ trip }) => {
     }
   };
 
-  const filterBookingsByType = (type) => {
-    return bookings.filter(booking => booking.type === type);
-  };
+  const bookingsByType = bookings.reduce((acc: any, booking: any) => {
+    const type = booking.type || 'other';
+    if (!acc[type]) acc[type] = [];
+    acc[type].push(booking);
+    return acc;
+  }, {});
 
-  const BookingCard = ({ booking }) => (
-    <Card className="mb-4">
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start mb-3">
-          <div className="flex items-center gap-2">
-            {getBookingIcon(booking.type)}
-            <h4 className="font-medium">
-              {booking.booking_data?.name || `${booking.type} Booking`}
-            </h4>
-          </div>
-          <Badge className={getStatusColor(booking.status)}>
-            {booking.status}
-          </Badge>
-        </div>
-        
-        <div className="space-y-2 text-sm text-gray-600">
-          {booking.booking_data?.location && (
-            <div className="flex items-center gap-2">
-              <MapPin className="h-3 w-3" />
-              {booking.booking_data.location}
-            </div>
-          )}
-          
-          {booking.booking_data?.date && (
-            <div className="flex items-center gap-2">
-              <Calendar className="h-3 w-3" />
-              {new Date(booking.booking_data.date).toLocaleDateString()}
-            </div>
-          )}
-          
-          {booking.total_price && (
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-3 w-3" />
-              ${booking.total_price.toLocaleString()}
-            </div>
-          )}
-        </div>
+  // Get all booking locations for the map
+  const bookingLocations = bookings
+    .map((booking: any) => booking.booking_data?.location || booking.booking_data?.destination)
+    .filter(Boolean);
 
-        <div className="flex justify-end mt-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => deleteBooking(booking.id)}
-          >
-            Cancel
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  // Add trip destination to map if available
+  const mapDestinations = trip.destination 
+    ? [trip.destination, ...bookingLocations]
+    : bookingLocations;
 
   if (loading) {
     return <div className="flex justify-center p-8">Loading bookings...</div>;
@@ -149,105 +112,200 @@ export const TripBookings: React.FC<TripBookingsProps> = ({ trip }) => {
 
   return (
     <div className="space-y-6">
+      {/* Trip Overview */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Trip Details</span>
-            <Button
-              onClick={() => setShowCreateDialog(true)}
-              size="sm"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Booking
-            </Button>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Trip Overview
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <p className="text-gray-500">Destination</p>
-              <p className="font-medium">{trip.destination || 'Not specified'}</p>
-            </div>
-            <div>
-              <p className="text-gray-500">Dates</p>
-              <p className="font-medium">
-                {trip.start_date && trip.end_date
-                  ? `${new Date(trip.start_date).toLocaleDateString()} - ${new Date(trip.end_date).toLocaleDateString()}`
-                  : 'Not specified'}
-              </p>
-            </div>
-            <div>
-              <p className="text-gray-500">Budget</p>
-              <p className="font-medium">${trip.budget?.toLocaleString() || 'Not set'}</p>
-            </div>
-            <div>
-              <p className="text-gray-500">Status</p>
-              <Badge className={getStatusColor(trip.status)}>
-                {trip.status}
-              </Badge>
-            </div>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {trip.destination && (
+              <div className="flex items-center text-sm">
+                <MapPin className="h-4 w-4 mr-2 text-gray-500" />
+                <span>{trip.destination}</span>
+              </div>
+            )}
+            
+            {trip.start_date && trip.end_date && (
+              <div className="flex items-center text-sm">
+                <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                <span>
+                  {format(new Date(trip.start_date), 'MMM d')} - {format(new Date(trip.end_date), 'MMM d, yyyy')}
+                </span>
+              </div>
+            )}
+            
+            {trip.budget && (
+              <div className="flex items-center text-sm">
+                <DollarSign className="h-4 w-4 mr-2 text-gray-500" />
+                <span>Budget: ${trip.budget.toLocaleString()}</span>
+              </div>
+            )}
           </div>
+
+          {mapDestinations.length > 0 && (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium mb-2">Trip Map</h4>
+              <GoogleMap
+                destinations={mapDestinations}
+                height="300px"
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      <Tabs value={selectedBookingType} onValueChange={setSelectedBookingType}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="flight" className="flex items-center gap-2">
-            <Plane className="h-4 w-4" />
-            Flights ({filterBookingsByType('flight').length})
-          </TabsTrigger>
-          <TabsTrigger value="hotel" className="flex items-center gap-2">
-            <Hotel className="h-4 w-4" />
-            Hotels ({filterBookingsByType('hotel').length})
-          </TabsTrigger>
-          <TabsTrigger value="car" className="flex items-center gap-2">
-            <Car className="h-4 w-4" />
-            Cars ({filterBookingsByType('car').length})
-          </TabsTrigger>
-          <TabsTrigger value="activity" className="flex items-center gap-2">
-            <MapPin className="h-4 w-4" />
-            Activities ({filterBookingsByType('activity').length})
-          </TabsTrigger>
-        </TabsList>
+      {/* Bookings Management */}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Trip Bookings</CardTitle>
+            <Button onClick={() => setShowCreateDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Booking
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {bookings.length === 0 ? (
+            <div className="text-center py-8">
+              <Hotel className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No bookings yet</h3>
+              <p className="text-gray-500 mb-4">Start adding flights, hotels, and activities for your trip</p>
+              <Button onClick={() => setShowCreateDialog(true)}>
+                Add Your First Booking
+              </Button>
+            </div>
+          ) : (
+            <Tabs defaultValue="all" className="w-full">
+              <TabsList>
+                <TabsTrigger value="all">All ({bookings.length})</TabsTrigger>
+                {Object.entries(bookingsByType).map(([type, typeBookings]) => {
+                  const Icon = getBookingIcon(type);
+                  return (
+                    <TabsTrigger key={type} value={type} className="capitalize">
+                      <Icon className="h-4 w-4 mr-1" />
+                      {type} ({(typeBookings as any[]).length})
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
 
-        {['flight', 'hotel', 'car', 'activity'].map((type) => (
-          <TabsContent key={type} value={type} className="mt-6">
-            {filterBookingsByType(type).length === 0 ? (
-              <Card>
-                <CardContent className="text-center py-12">
-                  {getBookingIcon(type)}
-                  <h3 className="text-lg font-medium text-gray-900 mb-2 mt-4">
-                    No {type} bookings yet
-                  </h3>
-                  <p className="text-gray-500 mb-4">
-                    Add your first {type} booking to get started
-                  </p>
-                  <Button
-                    onClick={() => {
-                      setSelectedBookingType(type);
-                      setShowCreateDialog(true);
-                    }}
-                  >
-                    Add {type} Booking
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {filterBookingsByType(type).map((booking) => (
-                  <BookingCard key={booking.id} booking={booking} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        ))}
-      </Tabs>
+              <TabsContent value="all" className="space-y-4 mt-4">
+                {bookings.map((booking: any) => {
+                  const Icon = getBookingIcon(booking.type);
+                  return (
+                    <Card key={booking.id}>
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-start space-x-3">
+                            <Icon className="h-5 w-5 mt-1 text-blue-600" />
+                            <div className="space-y-1">
+                              <h4 className="font-medium">
+                                {booking.booking_data?.name || `${booking.type} Booking`}
+                              </h4>
+                              {booking.booking_data?.location && (
+                                <p className="text-sm text-gray-600 flex items-center">
+                                  <MapPin className="h-3 w-3 mr-1" />
+                                  {booking.booking_data.location}
+                                </p>
+                              )}
+                              {booking.booking_data?.dates && (
+                                <p className="text-sm text-gray-600 flex items-center">
+                                  <Calendar className="h-3 w-3 mr-1" />
+                                  {booking.booking_data.dates}
+                                </p>
+                              )}
+                              {booking.total_price && (
+                                <p className="text-sm font-medium text-green-600">
+                                  ${booking.total_price}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge className={getStatusColor(booking.status)}>
+                              {booking.status}
+                            </Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => deleteBooking(booking.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </TabsContent>
+
+              {Object.entries(bookingsByType).map(([type, typeBookings]) => (
+                <TabsContent key={type} value={type} className="space-y-4 mt-4">
+                  {(typeBookings as any[]).map((booking: any) => {
+                    const Icon = getBookingIcon(booking.type);
+                    return (
+                      <Card key={booking.id}>
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-start space-x-3">
+                              <Icon className="h-5 w-5 mt-1 text-blue-600" />
+                              <div className="space-y-1">
+                                <h4 className="font-medium">
+                                  {booking.booking_data?.name || `${booking.type} Booking`}
+                                </h4>
+                                {booking.booking_data?.location && (
+                                  <p className="text-sm text-gray-600 flex items-center">
+                                    <MapPin className="h-3 w-3 mr-1" />
+                                    {booking.booking_data.location}
+                                  </p>
+                                )}
+                                {booking.booking_data?.dates && (
+                                  <p className="text-sm text-gray-600 flex items-center">
+                                    <Calendar className="h-3 w-3 mr-1" />
+                                    {booking.booking_data.dates}
+                                  </p>
+                                )}
+                                {booking.total_price && (
+                                  <p className="text-sm font-medium text-green-600">
+                                    ${booking.total_price}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Badge className={getStatusColor(booking.status)}>
+                                {booking.status}
+                              </Badge>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => deleteBooking(booking.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </TabsContent>
+              ))}
+            </Tabs>
+          )}
+        </CardContent>
+      </Card>
 
       <CreateBookingDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
-        trip={trip}
-        bookingType={selectedBookingType}
+        tripId={trip.id}
         onBookingCreated={() => {
           fetchBookings();
           setShowCreateDialog(false);

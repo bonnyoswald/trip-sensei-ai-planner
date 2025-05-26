@@ -34,11 +34,11 @@ export const GoogleMap: React.FC<GoogleMapProps> = ({
           libraries: ['places', 'geometry']
         });
 
-        const { Map } = await loader.load();
+        await loader.load();
         
         if (!mapRef.current) return;
 
-        const map = new Map(mapRef.current, {
+        const map = new google.maps.Map(mapRef.current, {
           center,
           zoom,
           styles: [

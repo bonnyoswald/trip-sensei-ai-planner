@@ -1,5 +1,29 @@
 
 import React, { useState } from 'react';
+
+// Define TypeScript interfaces for the itinerary structure
+export interface Activity {
+  time: string; // HH:mm format
+  activity: string;
+  location: string;
+  description: string;
+  estimated_cost: number;
+  duration: string;
+}
+
+export interface DayPlan {
+  day: number;
+  date: string; // ISO date format
+  activities: Activity[];
+}
+
+export interface Itinerary {
+  title: string;
+  overview: string;
+  days: DayPlan[];
+  estimated_total_cost: number;
+  tips: string[];
+}
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,7 +41,7 @@ export const ItineraryGenerator = () => {
     preferences: '',
   });
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedItinerary, setGeneratedItinerary] = useState<any>(null);
+  const [generatedItinerary, setGeneratedItinerary] = useState<Itinerary | null>(null);
   const { toast } = useToast();
 
   const generateItinerary = async () => {
@@ -30,14 +54,34 @@ export const ItineraryGenerator = () => {
       return;
     }
 
+    const duration = parseInt(formData.duration);
+    if (isNaN(duration) || duration <= 0) {
+      toast({
+        title: 'Invalid Duration',
+        description: 'Duration must be a positive number of days.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const budget = parseFloat(formData.budget);
+    if (isNaN(budget) || budget <= 0) {
+      toast({
+        title: 'Invalid Budget',
+        description: 'Budget must be a positive amount.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsGenerating(true);
 
     try {
       const { data, error } = await supabase.functions.invoke('generate-itinerary', {
         body: {
           destination: formData.destination,
-          duration: parseInt(formData.duration),
-          budget: parseFloat(formData.budget),
+          duration: duration, // Use validated and parsed duration
+          budget: budget, // Use validated and parsed budget
           preferences: formData.preferences,
         },
       });
@@ -151,17 +195,17 @@ export const ItineraryGenerator = () => {
             <p className="text-muted-foreground mb-4">{generatedItinerary.overview}</p>
             
             <div className="space-y-4">
-              {generatedItinerary.days?.map((day: any, index: number) => (
+              {generatedItinerary.days?.map((day: DayPlan, index: number) => (
                 <div key={index} className="border rounded-lg p-4">
-                  <h3 className="font-semibold mb-2">Day {day.day}</h3>
+                  <h3 className="font-semibold mb-2">Day {day.day} {day.date && <span className="text-sm text-muted-foreground font-normal">({new Date(day.date).toLocaleDateString()})</span>}</h3>
                   <div className="space-y-2">
-                    {day.activities?.map((activity: any, actIndex: number) => (
+                    {day.activities?.map((activity: Activity, actIndex: number) => (
                       <div key={actIndex} className="flex gap-3 p-2 bg-muted/50 rounded">
                         <div className="text-sm font-medium w-16">{activity.time}</div>
                         <div className="flex-1">
                           <div className="font-medium">{activity.activity}</div>
                           <div className="text-sm text-muted-foreground">
-                            {activity.location} • {activity.duration} • ${activity.estimated_cost}
+                            {activity.location} {activity.duration && `• ${activity.duration}`} {activity.estimated_cost > 0 && `• $${activity.estimated_cost}`}
                           </div>
                           <div className="text-sm">{activity.description}</div>
                         </div>
